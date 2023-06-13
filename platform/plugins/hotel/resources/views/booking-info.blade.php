@@ -82,7 +82,7 @@
             <p><strong>{{ __('Payment ID') }}</strong>: <a href="{{ route('payment.show', $booking->payment->id) }}" target="_blank">{{ $booking->payment->charge_id }} <i class="fas fa-external-link-alt"></i></a></p>
         @endif
         <p><strong>{{ __('Payment method') }}</strong>: {{ $booking->payment->payment_channel->label() }}</p>
-        <p><strong>{{ __('Payment status') }}</strong>: {!! $booking->payment->status->toHtml() !!}</p>
+        <p><strong>{{ __('Payment status') }}</strong>: {!! $booking->status->toHtml() !!}</p>
 
         @if (($booking->payment->payment_channel == \Botble\Payment\Enums\PaymentMethodEnum::BANK_TRANSFER && $booking->payment->status == \Botble\Payment\Enums\PaymentStatusEnum::PENDING))
             <p><strong>{{ __('Payment info') }}</strong>: <span class="text-warning">{!! BaseHelper::clean(get_payment_setting('description', $booking->payment->payment_channel)) !!}</span></p>

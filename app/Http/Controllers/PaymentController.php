@@ -175,12 +175,14 @@ class PaymentController extends Controller
             $partnerCode = 'MOMOBKUN20180529';
             $accessKey = 'klm05TvNBzhg7h7j';
             $secretKey = 'at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa';
+
             $orderInfo = "Thanh toan MoMo";
             $amount =$booking->amount;
             $orderId = time() . "";
             $redirectUrl = $redirectUrlSuccess;// thanhf coong
             $ipnUrl = $redirectUrlSuccess;// truy van ket qua
             $extraData = "";
+            $accessKey = $accessKey;
             $serectkey = $secretKey;
             $requestId = time() . "";
             $requestType = "payWithATM";
@@ -208,17 +210,16 @@ class PaymentController extends Controller
 //            header('Location: ' . $jsonResult['payUrl']);
 
         } else { //vnpay
-            $vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+            $vnp_Url = config('vnpayService.vnp_Url');
             $vnp_Returnurl = $redirectUrlSuccess;
-            $vnp_TmnCode = "A398VYQR";//Mã website tại VNPAY
-            $vnp_HashSecret = "ALDJGSEHFKNTXAVOYFBBJIBYNLTMTDJD"; //Chuỗi bí mật
-
+            $vnp_TmnCode =  config('vnpayService.vnp_TmnCode');//Mã website tại VNPAY
+            $vnp_HashSecret =  config('vnpayService.vnp_HashSecret');; //Chuỗi bí mật
             $vnp_TxnRef = $booking->id; //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
             $vnp_OrderInfo = 'Test thanh toán vnpay';
             $vnp_OrderType = 'billpayment';
             $vnp_Amount = $booking->amount * 100; //giá
             $vnp_Locale = 'vn';
-            $vnp_BankCode = 'NCB'; // code ngân hàng
+            $vnp_BankCode = ''; // code ngân hàng
             $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];
             //Add Params of 2.0.1 Version
 

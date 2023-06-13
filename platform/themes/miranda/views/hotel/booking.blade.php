@@ -19,7 +19,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="booking-form-body room-details">
-                    <form action="{{ route('payment.store') }}" class="booking-form-main payment-checkout-form" method="POST">
+                    <form action="{{ route('public.booking.checkout') }}" class="booking-form-main payment-checkout-form" method="POST">
                         @csrf
                         <input type="hidden" name="token" value="{{ $token }}">
                         <input type="hidden" name="amount" value="{{ $total }}">

@@ -134,7 +134,7 @@ class PublicController extends Controller
     {
         $slug = SlugHelper::getSlug($key, SlugHelper::getPrefix(Room::class));
 
-        if (! $slug) {
+        if (!$slug) {
             abort(404);
         }
 
@@ -144,7 +144,7 @@ class PublicController extends Controller
             ['amenities', 'currency', 'category']
         );
 
-        if (! $room) {
+        if (!$room) {
             abort(404);
         }
 
@@ -225,7 +225,7 @@ class PublicController extends Controller
     {
         $slug = SlugHelper::getSlug($key, SlugHelper::getPrefix(Place::class));
 
-        if (! $slug) {
+        if (!$slug) {
             abort(404);
         }
 
@@ -235,7 +235,7 @@ class PublicController extends Controller
             ['slugable']
         );
 
-        if (! $place) {
+        if (!$place) {
             abort(404);
         }
 
@@ -275,7 +275,7 @@ class PublicController extends Controller
             ['currency', 'category']
         );
 
-        if (! $room) {
+        if (!$room) {
             abort(404);
         }
 
@@ -290,11 +290,12 @@ class PublicController extends Controller
     }
 
     public function getBooking(
-        string $token,
-        RoomInterface $roomRepository,
+        string           $token,
+        RoomInterface    $roomRepository,
         ServiceInterface $serviceRepository,
         BaseHttpResponse $response
-    ) {
+    )
+    {
         SeoHelper::setTitle(__('Booking'));
 
         $sessionData = [];
@@ -353,11 +354,11 @@ class PublicController extends Controller
             ]
         );
 
-        if (! $room) {
+        if (!$room) {
             abort(404);
         }
 
-        if (! $room->isAvailableAt(['start_date' => $startDate, 'end_date' => $endDate])) {
+        if (!$room->isAvailableAt(['start_date' => $startDate, 'end_date' => $endDate])) {
             return $response
                 ->setError()
                 ->setMessage(__(
@@ -391,15 +392,16 @@ class PublicController extends Controller
     }
 
     public function postCheckout(
-        CheckoutRequest $request,
-        BookingInterface $bookingRepository,
-        RoomInterface $roomRepository,
+        CheckoutRequest         $request,
+        BookingInterface        $bookingRepository,
+        RoomInterface           $roomRepository,
         BookingAddressInterface $bookingAddressRepository,
-        BookingRoomInterface $bookingRoomRepository,
-        ServiceInterface $serviceRepository,
-        BookingService $bookingService,
-        BaseHttpResponse $response
-    ) {
+        BookingRoomInterface    $bookingRoomRepository,
+        ServiceInterface        $serviceRepository,
+        BookingService          $bookingService,
+        BaseHttpResponse        $response
+    )
+    {
         $room = $roomRepository->findOrFail($request->input('room_id'));
 
         $booking = $bookingRepository->getModel();
@@ -499,7 +501,7 @@ class PublicController extends Controller
                 ->setMessage($data['message']);
         }
 
-        if ($data['error'] || ! $data['charge_id']) {
+        if ($data['error'] || !$data['charge_id']) {
             return $response
                 ->setError()
                 ->setNextUrl(PaymentHelper::getCancelURL())
@@ -515,20 +517,125 @@ class PublicController extends Controller
             session()->forget($request->input('token'));
             session()->forget('checkout_token');
         }
+        if ($request->input('payment_method') != 'cod'){
+            $vnp_Url = config('vnpayService.vnp_Url');
+            $vnp_Returnurl = $redirectUrl;
+            $vnp_TmnCode =  config('vnpayService.vnp_TmnCode');//Mã website tại VNPAY
+            $vnp_HashSecret =  config('vnpayService.vnp_HashSecret');; //Chuỗi bí mật
+            $vnp_TxnRef = $booking->id; //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
+            $vnp_OrderInfo = 'Test thanh toán vnpay';
+            $vnp_OrderType = 'billpayment';
+            $vnp_Amount = $booking->amount * 100; //giá
+            $vnp_Locale = 'vn';
+            $vnp_BankCode = ''; // code ngân hàng
+            $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];
+            //Add Params of 2.0.1 Version
 
-        return $response
-            ->setNextUrl($redirectUrl)
-            ->setMessage(__('Booking successfully!'));
+            //Billing
+            $inputData = array(
+                "vnp_Version" => "2.1.0",
+                "vnp_TmnCode" => $vnp_TmnCode,
+                "vnp_Amount" => $vnp_Amount,
+                "vnp_Command" => "pay",
+                "vnp_CreateDate" => date('YmdHis'),
+                "vnp_CurrCode" => "VND",
+                "vnp_IpAddr" => $vnp_IpAddr,
+                "vnp_Locale" => $vnp_Locale,
+                "vnp_OrderInfo" => $vnp_OrderInfo,
+                "vnp_OrderType" => $vnp_OrderType,
+                "vnp_ReturnUrl" => $vnp_Returnurl,
+                "vnp_TxnRef" => $vnp_TxnRef
+
+            );
+
+            if (isset($vnp_BankCode) && $vnp_BankCode != "") {
+                $inputData['vnp_BankCode'] = $vnp_BankCode;
+            }
+            if (isset($vnp_Bill_State) && $vnp_Bill_State != "") {
+                $inputData['vnp_Bill_State'] = $vnp_Bill_State;
+            }
+
+//        var_dump($inputData);
+            ksort($inputData);
+            $query = "";
+            $i = 0;
+            $hashdata = "";
+            foreach ($inputData as $key => $value) {
+                if ($i == 1) {
+                    $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+                } else {
+                    $hashdata .= urlencode($key) . "=" . urlencode($value);
+                    $i = 1;
+                }
+                $query .= urlencode($key) . "=" . urlencode($value) . '&';
+            }
+
+            $vnp_Url = $vnp_Url . "?" . $query;
+            if (isset($vnp_HashSecret)) {
+                $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);//
+                $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+            }
+            $returnData = array('code' => '00'
+            , 'message' => 'success'
+            , 'data' => $vnp_Url);
+            if (isset($_POST['payment_method'])) {
+                return redirect($vnp_Url);
+            } else {
+                echo json_encode($returnData);
+            }
+        }
+//        return $response
+//            ->setNextUrl($redirectUrl)
+//            ->setMessage(__('Booking successfully!'));
     }
 
     public function checkoutSuccess(string $transactionId, BookingInterface $bookingRepository)
     {
+        $vnp_HashSecret = config('vnpayService.vnp_HashSecret'); //Secret key
         $booking = $bookingRepository->getFirstBy(['transaction_id' => $transactionId]);
-
-        if (! $booking) {
-            abort(404);
+        $vnp_SecureHash = $_GET['vnp_SecureHash'];
+        $inputData = array();
+        foreach ($_GET as $key => $value) {
+            if (substr($key, 0, 4) == "vnp_") {
+                $inputData[$key] = $value;
+            }
         }
 
+        unset($inputData['vnp_SecureHash']);
+        ksort($inputData);
+
+        $i = 0;
+        $hashData = "";
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                $hashData = $hashData . '&' . urlencode($key) . "=" . urlencode($value);
+
+            } else {
+                $hashData = $hashData . urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+        }
+
+
+        $secureHash = hash_hmac('sha512', $hashData, $vnp_HashSecret);
+        if (!$booking) {
+            abort(404);
+        }
+        if ($secureHash == $vnp_SecureHash) {
+            if ($_GET['vnp_ResponseCode'] == '00') {
+                $booking->update([
+                    'status' => 'completed',
+                ]);
+            } else {
+                $booking->update([
+                    'status' => 'processing',
+                ]);
+            }
+        } else {
+            $booking->update([
+                'status' => 'cancelled',
+            ]);
+        }
         SeoHelper::setTitle(__('Booking Information'));
 
         Theme::breadcrumb()
@@ -540,10 +647,11 @@ class PublicController extends Controller
 
     public function ajaxCalculateBookingAmount(
         CalculateBookingAmountRequest $request,
-        BaseHttpResponse $response,
-        RoomInterface $roomRepository,
-        ServiceInterface $serviceRepository
-    ) {
+        BaseHttpResponse              $response,
+        RoomInterface                 $roomRepository,
+        ServiceInterface              $serviceRepository
+    )
+    {
         $request->validate([
             'start_date' => 'required:date_format:d-m-Y',
             'end_date' => 'required:date_format:d-m-Y',
@@ -581,16 +689,17 @@ class PublicController extends Controller
     }
 
     public function changeCurrency(
-        Request $request,
+        Request           $request,
         CurrencyInterface $currencyRepository,
-        BaseHttpResponse $response,
-        $title = null
-    ) {
+        BaseHttpResponse  $response,
+                          $title = null
+    )
+    {
         if (empty($title)) {
             $title = $request->input('currency');
         }
 
-        if (! $title) {
+        if (!$title) {
             return $response;
         }
 

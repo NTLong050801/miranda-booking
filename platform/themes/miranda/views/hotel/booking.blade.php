@@ -19,7 +19,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="booking-form-body room-details">
-                    <form action="{{ route('public.booking.checkout') }}" class="booking-form-main payment-checkout-form" method="POST">
+                    <form action="{{ route('payment.store') }}" class="booking-form-main payment-checkout-form" method="POST">
                         @csrf
                         <input type="hidden" name="token" value="{{ $token }}">
                         <input type="hidden" name="amount" value="{{ $total }}">
@@ -194,7 +194,7 @@
                                     </label>
                                 </div>
                                 <div class="form-group mb-0">
-                                    <button type="submit" class="main-btn btn-filled payment-checkout-btn" data-processing-text="{{ __('Processing. Please wait...') }}" data-error-header="{{ __('Error') }}">{{ __('Checkout') }}</button>
+                                    <button type="submit" name="" class="main-btn btn-filled payment-checkout-btn" data-processing-text="{{ __('Processing. Please wait...') }}" data-error-header="{{ __('Error') }}">{{ __('Checkout') }}</button>
                                 </div>
                         </div>
                     </form>

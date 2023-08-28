@@ -19,6 +19,7 @@ class HotelController extends BaseController
 
     public function getSettings()
     {
+
         PageTitle::setTitle(trans('plugins/hotel::hotel.settings'));
 
         Assets::addScripts(['jquery-ui'])
